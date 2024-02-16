@@ -30,6 +30,8 @@
     import Glibc
 #endif
 
+import XCTRuntime
+
 /// Starts a test run for the specified test cases.
 ///
 /// Example usage:
@@ -77,6 +79,14 @@ public func XCTMain(
 ) -> CInt {
     let observers = observers ?? [PrintObserver()]
     let testBundle = Bundle.main
+
+    var runtimeType: XCTRuntime.Type?
+    let environment = ProcessInfo.processInfo.environment
+    if let testRuntimeClass = environment["XCT_RUNTIME_CLASS"] {
+        if let c = testBundle.classNamed(testRuntimeClass) {
+            runtimeType = c as? XCTRuntime.Type
+        }
+    }
 
     let executionMode = ArgumentParser(arguments: arguments).executionMode
 
@@ -145,9 +155,17 @@ public func XCTMain(
             observationCenter.addTestObserver(observer)
         }
 
-        observationCenter.testBundleWillStart(testBundle)
-        rootTestSuite.run()
-        observationCenter.testBundleDidFinish(testBundle)
+        let runner: () -> Void = {
+            observationCenter.testBundleWillStart(testBundle)
+            rootTestSuite.run()
+            observationCenter.testBundleDidFinish(testBundle)
+        }
+
+        if let runtimeType {
+            runtimeType.run(completion: runner)
+        } else {
+            runner()
+        }
 
         return rootTestSuite.testRun!.totalFailureCount == 0 ? EXIT_SUCCESS : EXIT_FAILURE
     }

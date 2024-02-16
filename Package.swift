@@ -16,8 +16,9 @@ let package = Package(
         )
     ],
     dependencies: [
+        .package(path: "../XCTRuntime"),
     ],
     targets: [
-        .target(name: "XCTest", dependencies: [], path: "Sources"),
+        .target(name: "XCTest", dependencies: ["XCTRuntime"], path: "Sources"),
     ]
 )
